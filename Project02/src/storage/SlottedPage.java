@@ -5,7 +5,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * A {@code SlottedPage} can store objects of possibly different sizes in a byte array.
@@ -90,7 +92,15 @@ public class SlottedPage implements Iterable<Object> {
 	 */
 	public int add(Object o) throws IOException, OverflowException {
 		// TODO complete this method (20 points)
-		throw new UnsupportedOperationException();
+		
+	    int location = save(o);
+	    int index = entryCount();
+	    int numOfEntries = index + 1;
+	    setEntryCount(numOfEntries);
+	    
+	    saveLocation(index, location);
+
+	    return index;
 	}
 
 	/**
@@ -108,7 +118,20 @@ public class SlottedPage implements Iterable<Object> {
 	 */
 	public Object get(int index) throws IndexOutOfBoundsException, IOException {
 		// TODO complete this method (20 points)
-		throw new UnsupportedOperationException();
+		
+		int startLocation = getLocation(index);
+		
+		if (startLocation == -1) {
+			return null;
+		}
+		
+		try {
+			return toObject(data, startLocation);
+			
+		}catch(Exception e) {
+			throw new IndexOutOfBoundsException();
+		}
+		
 	}
 
 	/**
@@ -154,8 +177,19 @@ public class SlottedPage implements Iterable<Object> {
 	 *             if an I/O error occurs
 	 */
 	public Object remove(int index) throws IndexOutOfBoundsException, IOException {
-		// TODO complete this method (10 points)
-		throw new UnsupportedOperationException();
+//		// TODO complete this method (10 points)
+
+		int startLocation = getLocation(index);
+		
+	    if (startLocation == -1) {
+	        return null;
+	    }
+	    
+	    Object o = get(index);
+	    
+	    saveLocation(index, -1);
+	    
+	    return o;
 	}
 
 	/**
@@ -164,7 +198,48 @@ public class SlottedPage implements Iterable<Object> {
 	@Override
 	public Iterator<Object> iterator() {
 		// TODO complete this method (10 points)
-		throw new UnsupportedOperationException();
+		class It implements Iterator<Object>{
+
+			private int index = 0;
+			
+			@Override
+			public boolean hasNext() {
+	            while (index < entryCount()) {
+	                try {
+						if (get(index) != null) {
+						    return true;
+						}
+					} catch (IndexOutOfBoundsException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+	                index++;
+	            }
+	            return false;
+	        }
+			
+			@Override
+			public Object next() {
+				
+				if(!hasNext()) {
+					throw new NoSuchElementException();
+				}
+				
+				 try {
+		                Object o = get(index++);
+		                
+		                while (o == null && index < entryCount()) {
+		                    o = get(index++);
+		                }
+
+		                return o;
+		            } catch (IndexOutOfBoundsException | IOException e) {
+		                throw new RuntimeException(e);
+		            }
+		        }
+			}
+		return new It();
 	}
 
 	/**
@@ -175,7 +250,52 @@ public class SlottedPage implements Iterable<Object> {
 	 */
 	protected void compact() throws IOException {
 		// TODO complete this method (5 points)
-		throw new UnsupportedOperationException();
+		Iterator<Object> it = iterator();
+		ArrayList<Object> objects = new ArrayList<Object>();
+		int objSize = 10;
+		
+		for (int i = 0; i < entryCount(); i++) {
+			int loc = getLocation(i);
+			if (loc != -1) {				
+				Object o = toObject(data, loc);
+				objects.add(o);
+			}else {
+				objects.add(null);
+			}
+		}
+			
+		int size = 0;
+		for (int i = 0; i < objects.size(); i++) {
+			if(objects.get(i) != null) {
+				byte[] b = toByteArray(objects.get(i));
+				size += b.length;
+			}
+		}
+	
+		int dataDestination = data.length - size;
+		
+		
+	    for (int i = objects.size() - 1; i >= 0; i--) {
+	    	Object o = objects.get(i);
+	    	
+	    	if (o != null) {
+				
+	    		byte[] ob = toByteArray(o);
+	    		System.arraycopy(ob, 0, data, dataDestination, ob.length);
+	    		
+	    		saveLocation(i, dataDestination);
+//	    		System.out.println("Object(" + i + ") length: " + ob.length);
+	    		System.out.println("SavedLocation of (" + i + "): " + getLocation(i) + ", Value: " + o);
+	    		dataDestination += ob.length; 
+			}else {
+				saveLocation(i, -1);
+				System.out.println("SavedLocation of (" + i + "): " + getLocation(i) + ", Value: " + o);
+			}
+
+	    }
+	    
+	    System.out.println("EntryCount: " + entryCount());
+	    setStartOfDataStorage(data.length - size);
 	}
 
 	/**

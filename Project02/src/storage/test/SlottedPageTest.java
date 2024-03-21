@@ -119,25 +119,38 @@ public class SlottedPageTest {
 			for (int i = 0; i < Integer.MAX_VALUE; i++)
 				p.add(i);
 		} catch (IOException | OverflowException e) {
-			// e.printStackTrace();
+			 e.printStackTrace();
 		}
+		
 		ArrayList<Object> l = list(p.iterator());
 		int index = 3;
 		Object o = l.set(index, null);
 		try {
 			p.remove(index);
 		} catch (IndexOutOfBoundsException | IOException e) {
-			// e.printStackTrace();
+			 e.printStackTrace();
 		}
 		try {
+//			System.out.println("l size before add: " + l.size());
 			l.add(o);
+//			System.out.println("l size after add: " + l.size());
+			
+//			for (int i = 0; i < l.size(); i++) {
+//				System.out.println("l(" + i + "): " + l.get(i));
+//				
+//			}
 			p.add(o);
 		} catch (IOException | OverflowException e) {
 			e.printStackTrace();
 		}
+		
 		assertEquals(l.size(), p.entryCount());
-		for (int i = 0; i < l.size(); i++)
+		for (int i = 0; i < l.size(); i++) {
+//			System.out.println(l.get(i) + " " );
+//			System.out.println(p.get(i));
+		
 			assertEquals(l.get(i), p.get(i));
+		}
 	}
 
 	/**
