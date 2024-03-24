@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import storage.SlottedPage.IndexOutOfBoundsException;
 import storage.SlottedPage.OverflowException;
 
 /**
@@ -115,9 +116,31 @@ public class FileManager implements StorageManager<Long, Object> {
 	 */
 	@Override
 	public Object put(int fileID, Long location, Object o) throws IOException, InvalidLocationException {
-		// SlottedPage p = page(fileID, first(location)); // the page specified by the 1st half of the location
 		// TODO complete this method (10 points)
-		throw new UnsupportedOperationException();
+		int pageID = first(location); 
+		SlottedPage p =  page(fileID, pageID); // the page specified by the 1st half of the location
+		 int pageIndex = second(location);
+		 
+		 
+		 if(pageID < 0 || pageID > slottedPageSize) {
+			 throw new InvalidLocationException();
+		 }else {
+			 if( p != null && pageIndex >= 0) {
+				 Object newObj;
+				try {
+					newObj = p.remove(pageIndex);
+					p.put(pageIndex, o);
+					updated(p, fileID);
+					return newObj;
+				} catch (IndexOutOfBoundsException | IOException | OverflowException e) {
+					e.printStackTrace();
+				}
+			 }else
+				 throw new InvalidLocationException();
+		 }
+		
+		 
+		 return null;
 	}
 
 	/**
@@ -135,9 +158,24 @@ public class FileManager implements StorageManager<Long, Object> {
 	 */
 	@Override
 	public Object get(int fileID, Long location) throws IOException, InvalidLocationException {
-		// SlottedPage p = page(fileID, first(location)); // the page specified by the 1st half of the location
-		// TODO complete this method (5 points)
-		throw new UnsupportedOperationException();
+//		 SlottedPage p = page(fileID, first(location)); // the page specified by the 1st half of the location
+		    int pageID = first(location);
+		    int pageIndex = second(location);
+		    
+		    System.out.println("PageID: " + pageID + "\nPageIndex: " + pageIndex + "\n");
+		    
+		    if (pageID < 0 || pageIndex < 0) {
+		        throw new InvalidLocationException();
+		    }
+		    
+		    SlottedPage p = page(fileID, pageID);
+		    System.out.println("p: " + p);
+		    
+		    try {
+		        return p.get(pageIndex);
+		    } catch (IndexOutOfBoundsException e) {
+		        return null;
+		    }
 	}
 
 	/**
@@ -159,7 +197,7 @@ public class FileManager implements StorageManager<Long, Object> {
 		// SlottedPage p = page(fileID, first(location)); // the page specified by the 1st half of the location
 		// TODO complete this method (5 points)
 		throw new UnsupportedOperationException();
-	}
+	    }
 
 	/**
 	 * Removes all data from the specified file.

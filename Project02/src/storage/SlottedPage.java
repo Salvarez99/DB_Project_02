@@ -250,9 +250,7 @@ public class SlottedPage implements Iterable<Object> {
 	 */
 	protected void compact() throws IOException {
 		// TODO complete this method (5 points)
-		Iterator<Object> it = iterator();
 		ArrayList<Object> objects = new ArrayList<Object>();
-		int objSize = 10;
 		
 		for (int i = 0; i < entryCount(); i++) {
 			int loc = getLocation(i);
@@ -285,16 +283,16 @@ public class SlottedPage implements Iterable<Object> {
 	    		
 	    		saveLocation(i, dataDestination);
 //	    		System.out.println("Object(" + i + ") length: " + ob.length);
-	    		System.out.println("SavedLocation of (" + i + "): " + getLocation(i) + ", Value: " + o);
+//	    		System.out.println("SavedLocation of (" + i + "): " + getLocation(i) + ", Value: " + o);
 	    		dataDestination += ob.length; 
 			}else {
 				saveLocation(i, -1);
-				System.out.println("SavedLocation of (" + i + "): " + getLocation(i) + ", Value: " + o);
+//				System.out.println("SavedLocation of (" + i + "): " + getLocation(i) + ", Value: " + o);
 			}
 
 	    }
 	    
-	    System.out.println("EntryCount: " + entryCount());
+//	    System.out.println("EntryCount: " + entryCount());
 	    setStartOfDataStorage(data.length - size);
 	}
 

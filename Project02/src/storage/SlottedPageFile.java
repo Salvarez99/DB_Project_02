@@ -112,6 +112,8 @@ public class SlottedPageFile {
 		if (pageID < 0)
 			return null;
 		long pos = ((long) pageID) * slottedPageSize;
+		
+		long len = file.length(); //TODO
 		if (pos + slottedPageSize > file.length())
 			return null;
 		seek(pos);
