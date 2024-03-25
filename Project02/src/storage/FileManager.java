@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import storage.SlottedPage.IndexOutOfBoundsException;
 import storage.SlottedPage.OverflowException;
@@ -117,30 +118,32 @@ public class FileManager implements StorageManager<Long, Object> {
 	@Override
 	public Object put(int fileID, Long location, Object o) throws IOException, InvalidLocationException {
 		// TODO complete this method (10 points)
-		int pageID = first(location); 
-		SlottedPage p =  page(fileID, pageID); // the page specified by the 1st half of the location
-		 int pageIndex = second(location);
-		 
-		 
-		 if(pageID < 0 || pageID > slottedPageSize) {
-			 throw new InvalidLocationException();
-		 }else {
-			 if( p != null && pageIndex >= 0) {
-				 Object newObj;
-				try {
-					newObj = p.remove(pageIndex);
-					p.put(pageIndex, o);
-					updated(p, fileID);
-					return newObj;
-				} catch (IndexOutOfBoundsException | IOException | OverflowException e) {
-					e.printStackTrace();
-				}
-			 }else
-				 throw new InvalidLocationException();
-		 }
-		
-		 
-		 return null;
+		int pageID = first(location);
+	    int pageIndex = second(location);
+	    
+	    if (pageID < 0 ) {
+	        throw new InvalidLocationException();
+	    }
+	    
+	    SlottedPage p = page(fileID, pageID);
+	    
+	    if (p == null) {
+	        try {
+	            p = new SlottedPage(pageID, slottedPageSize);
+	            updated(p, fileID); 
+	        } catch (IOException e) {
+	            throw new RuntimeException("Error creating new page", e);
+	        }
+	    }
+	    
+	    try {
+	        p.put(pageIndex, o);
+	        updated(p, fileID);
+	    } catch (IOException | OverflowException | IndexOutOfBoundsException e) {
+	        throw new InvalidLocationException();
+	    }
+	    
+	    return o;
 	}
 
 	/**
@@ -159,23 +162,24 @@ public class FileManager implements StorageManager<Long, Object> {
 	@Override
 	public Object get(int fileID, Long location) throws IOException, InvalidLocationException {
 //		 SlottedPage p = page(fileID, first(location)); // the page specified by the 1st half of the location
-		    int pageID = first(location);
-		    int pageIndex = second(location);
+		// TODO complete this method (5 points)
+		int pageID = first(location);
+		int pageIndex = second(location);
+		SlottedPage p = page(fileID, pageID);
+		
+		if (pageID < 0) {
+		    throw new InvalidLocationException();
+		}else if (p == null) {
+			throw new InvalidLocationException();
+		}
+		
+		try {
+		    return p.get(pageIndex);
+		} catch (IndexOutOfBoundsException e) {
+		    throw new InvalidLocationException();
+		}
 		    
-		    System.out.println("PageID: " + pageID + "\nPageIndex: " + pageIndex + "\n");
-		    
-		    if (pageID < 0 || pageIndex < 0) {
-		        throw new InvalidLocationException();
-		    }
-		    
-		    SlottedPage p = page(fileID, pageID);
-		    System.out.println("p: " + p);
-		    
-		    try {
-		        return p.get(pageIndex);
-		    } catch (IndexOutOfBoundsException e) {
-		        return null;
-		    }
+    
 	}
 
 	/**
@@ -196,8 +200,24 @@ public class FileManager implements StorageManager<Long, Object> {
 	public Object remove(int fileID, Long location) throws IOException, InvalidLocationException {
 		// SlottedPage p = page(fileID, first(location)); // the page specified by the 1st half of the location
 		// TODO complete this method (5 points)
-		throw new UnsupportedOperationException();
+	    int pageID = first(location);
+	    int pageIndex = second(location);
+	    SlottedPage p = page(fileID, pageID);
+	    
+	    if (pageID < 0) {
+	        throw new InvalidLocationException();
+	    }else if (p == null) {
+	    	throw new InvalidLocationException(); 
 	    }
+	    
+	    try {
+	        Object o = p.remove(pageIndex);
+	        updated(p, fileID); 
+	        return o;
+	    } catch (IndexOutOfBoundsException e) {
+	        throw new InvalidLocationException();
+	    }
+	}
 
 	/**
 	 * Removes all data from the specified file.
@@ -222,7 +242,37 @@ public class FileManager implements StorageManager<Long, Object> {
 	@Override
 	public Iterator<Object> iterator(int fileID) {
 		// TODO complete this method (5 points)
-		throw new UnsupportedOperationException();
+		return new Iterator<Object>() {
+		    private int currentPageID = 0;
+		    private Iterator<Object> currentPageIterator = null;
+		    
+		    @Override
+		    public boolean hasNext() {
+		        if (currentPageIterator != null && currentPageIterator.hasNext()) {
+		            return true;
+		        } else {
+		            try {
+		                SlottedPage currentPage = page(fileID, currentPageID++);
+		                if (currentPage != null) {
+		                    currentPageIterator = currentPage.iterator();
+		                    return currentPageIterator.hasNext();
+		                } else {
+		                    return false;
+		                }
+		            } catch (IOException e) {
+		                throw new RuntimeException(e);
+		            }
+		        }
+		    }
+
+		    @Override
+		    public Object next() {
+		        if (!hasNext()) {
+		            throw new NoSuchElementException();
+		        }
+		        return currentPageIterator.next();
+		    }
+		};
 	}
 
 	/**
